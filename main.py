@@ -4,28 +4,38 @@ import random
 
 # pygame setup
 pygame.init()
-screen_width = 1280
-screen_height = 720
-screen = pygame.display.set_mode((screen_width, screen_height))
+square_width = 750
+pixel_width = 50
+screen = pygame.display.set_mode([square_width] * 2)
 clock = pygame.time.Clock()
 running = True
 
 def generate_starting_position():
-    position_range = (pixel_width // 2, screen_width - pixel_width // 2, pixel_width)
+    position_range = (pixel_width // 2, square_width - pixel_width // 2, pixel_width)
     return random.randrange(*position_range), random.randrange(*position_range)
 
+def reset():
+    target.center = generate_starting_position()
+    snake_pixel.center = generate_starting_position()
+    return snake_pixel.copy()
+
+def is_out_of_bounds():
+    return snake_pixel.bottom > square_width or snake_pixel.top < 0 \
+        or snake_pixel.left < 0 or snake_pixel.right > square_width
 
 # Playground
 pixel_width = 50
 
 # snake
-snake_pixel = pygame.rect.Rect(0, 0, pixel_width, pixel_width)
+snake_pixel = pygame.rect.Rect(0, 0, pixel_width - 2, pixel_width - 2)
 snake_pixel.center = generate_starting_position()
-snake = snake_pixel.copy()
+snake = [snake_pixel.copy()]
+snake_direction = (0, 0)
+snake_length = 1
 
 # target
-target_pixel = pygame.rect.Rect(0, 0, pixel_width, pixel_width)
-target_pixel.center = generate_starting_position()
+target = pygame.rect.Rect([0, 0, pixel_width - 2, pixel_width - 2])
+target.center = generate_starting_position()
 
 while running:
     # poll for events
@@ -37,13 +47,48 @@ while running:
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("black")
 
+    if is_out_of_bounds():
+        snake_length = 1
+        target.center = generate_starting_position()
+        snake_pixel.center = generate_starting_position()
+        snake = [snake_pixel.copy()]
+
+    if snake_pixel.center == target.center:
+        target.center = generate_starting_position()
+        snake_length += 1
+        snake.append(snake_pixel.copy())
+
     # RENDER YOUR GAME HERE
-    pygame.draw.rect(screen, "purple", snake_pixel)
-    pygame.draw.rect(screen, "green", target_pixel)
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_w]:
+        snake_direction = (0, - pixel_width)
+    if keys[pygame.K_s]:
+        snake_direction = (0, pixel_width)
+    if keys[pygame.K_a]:
+        snake_direction = (- pixel_width, 0)
+    if keys[pygame.K_d]:
+        snake_direction = (pixel_width, 0)
+    #if snake_pixel.colliderect(target):
+    #    snake_length += 1
+    #    target.center = generate_starting_position()
+    # add PAUSE on ESCAPE
+
+    snake_pixel.move_ip(snake_direction)
+    snake.append(snake_pixel.copy())
+    snake = snake[-snake_length:]
+
+    #pygame.draw.rect(screen, "purple", snake_pixel)
+    for snake_part in snake:
+        pygame.draw.rect(screen, "green", snake_pixel)
+    
+    pygame.draw.rect(screen, "red", target)
 
     # flip() the display to put your work on screen
-    pygame.display.flip()
+    pygame.display.flip()    
 
     clock.tick(60)  # limits FPS to 60
+
+    clock.tick(10)
 
 pygame.quit()
